@@ -268,11 +268,11 @@ async function getMessage(req, res) {
 
   const maxMessageId = rows.length ? Math.max(...rows.map(r => r.id)) : 0;
 
-  const [num] = await pool.query('SELECT COUNT(*) as count from message WHERE channel_id = ?', [channel_id])
+  const [num] = await pool.query('SELECT message_count FROM channel WHERE id = ?', [channel_id])
   await pool.query(`INSERT INTO haveread_count (user_id, channel_id, num)
   VALUES (?, ?, ?)
   ON DUPLICATE KEY UPDATE num = ?`,
-  [userId, channel_id, num.count, num.count]);
+  [userId, channel_id, num.message_count, num.message_count]);
 
   res.json(response); // TODO: insert into haveread の前でもいいかも
 }
