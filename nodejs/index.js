@@ -326,12 +326,12 @@ function fetchUnread(req, res) {
 app.get('/history/:channelId', loginRequired, getHistory)
 async function getHistory(req, res) {
   const { channelId } = req.params
-  let page = parseInt(req.query.page || '1')
+  const page = parseInt(req.query.page || '1')
 
   const N = 20
-  const [{ cnt }] = await pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ?', [channelId])
+  const [{ count }] = await pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ?', [channelId])
 
-  const maxPage = Math.max(Math.ceil(cnt / N), 1)
+  const maxPage = Math.max(Math.ceil(count / N), 1)
 
   if (isNaN(page) || page < 1 || page > maxPage) {
     res.status(400).end()
