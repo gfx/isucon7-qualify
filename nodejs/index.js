@@ -199,17 +199,14 @@ app.post('/message', postMessage)
 function postMessage(req, res) {
   const { userId } = req.session
 
-  return dbGetUser(pool, userId)
-    .then(user => {
-      const { channel_id, message } = req.body
-      if (!user || !channel_id || !message) {
-        res.status(403).end()
-        return
-      }
+  const { channel_id, message } = req.body
+  if (!userId || !channel_id || !message) {
+    res.status(403).end()
+    return
+  }
 
-      return dbAddMessage(pool, channel_id, userId, message)
-        .then(() => res.status(204).end(''))
-    })
+  return dbAddMessage(pool, channel_id, userId, message)
+    .then(() => res.status(204).end(''))
 }
 
 function zeroPadd (num, digit) {
@@ -286,7 +283,7 @@ function fetchUnread(req, res) {
     return
   }
 
-  return sleep(0.5)
+  return sleep(0.1)
     .then(() => pool.query('select channel_id as id, count(*) as count from message group by channel_id'))
     .then(channels => {
       return Promise.all([
