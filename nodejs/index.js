@@ -454,6 +454,8 @@ function postProfile(req, res) {
               host: 'db',
               path: '/icons/' + avatarName
             }, (res) => {
+              res.on('data', (data) => {
+              })
               res.on('error', (err) => {
                 reject(err)
               })
