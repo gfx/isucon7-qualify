@@ -20,7 +20,7 @@
     <% end %>
     <% for p in [1..Math.max(@maxPage, 1)] : %>
     <% if @page == p : %> <li class="active"> <% else : %> <li> <% end %>
-        <a href="/history/<%= @channelId "?page=" + p %>"><%= p %></a></li>
+        <a href="/history/<%= @channelId + "?page=" + p %>"><%= p %></a></li>
       <% end %>
       <% if @page < @maxPage : %>
       <li><a href="/history/<%= @channelId + "?page=" + (@page+1) %>"><span>»</span></a></li>
