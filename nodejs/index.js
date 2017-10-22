@@ -45,6 +45,7 @@ const pool = mysql.createPool({
   password: process.env.ISUBATA_DB_PASSWORD || 'isucon',
   database: 'isubata',
   charset: 'utf8mb4',
+  dateStrings: true,
 })
 pool.query = promisify(pool.query, pool)
 
@@ -223,10 +224,7 @@ function zeroPadd (num, digit) {
 }
 
 function formatDate (dateStr) {
-  const d = new Date(dateStr)
-  const datePart = [d.getFullYear(), zeroPadd(d.getMonth() + 1, 2), zeroPadd(d.getDate(), 2)].join('/')
-  const timePart = [zeroPadd(d.getHours(), 2), zeroPadd(d.getMinutes(), 2), zeroPadd(d.getSeconds(), 2)].join(':')
-  return datePart + ' ' + timePart
+  return dateStr.replace(/-/g, '/');
 }
 
 app.get('/message', getMessage)
