@@ -352,7 +352,7 @@ async function getHistory(req, res) {
     });
   }
 
-  message.reverse();
+  messages.reverse();
 
   const { channels, description } = await getChannelListInfo(pool, channelId)
   res.render('history', {
