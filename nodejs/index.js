@@ -296,7 +296,7 @@ function fetchUnread(req, res) {
     }).then(([channels, havereads]) => {
       const havereadMessageIdMap = {};
       for (const haveread of havereads) {
-        havereadMap[haveread.channel_id] = haveread.message_id;
+        havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
       }
 
       const results = []
