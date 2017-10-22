@@ -324,50 +324,40 @@ function fetchUnread(req, res) {
 }
 
 app.get('/history/:channelId', loginRequired, getHistory)
-function getHistory(req, res) {
+async function getHistory(req, res) {
   const { channelId } = req.params
-  let page = parseInt(req.query.page || '1')
+  const page = parseInt(req.query.page || '1')
 
   const N = 20
-  return pool.query('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?', [channelId])
-    .then(([row2]) => {
-      const cnt = row2.cnt
-      const maxPage = Math.max(Math.ceil(cnt / N), 1)
+  const [{ count }] = await pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ?', [channelId])
 
-      if (isNaN(page) || page < 1 || page > maxPage) {
-        res.status(400).end()
-        return
-      }
+  const maxPage = Math.max(Math.ceil(count / N), 1)
 
-      return pool.query('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?', [channelId, N, (page - 1) * N])
-        .then(rows => {
-          const messages = []
-          let p = Promise.resolve()
-          rows.forEach(row => {
-            const r = {}
-            r.id = row.id
-            p = p.then(() => {
-              return pool.query('SELECT name, display_name, avatar_icon FROM user WHERE id = ?', [row.user_id])
-                .then(([user]) => {
-                  r.user = user
-                  r.date = formatDate(row.created_at)
-                  r.content = row.content
-                  messages.push(r)
-                })
-            })
-          })
+  if (isNaN(page) || page < 1 || page > maxPage) {
+    res.status(400).end()
+    return
+  }
 
-          return p.then(() => {
-            messages.reverse()
-            return getChannelListInfo(pool, channelId)
-              .then(({ channels, description }) => {
-                res.render('history', {
-                  req, channels, channelId, messages, maxPage, page,
-                })
-              })
-          })
-      })
-    })
+  const rows = await pool.query('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?', [channelId, N, (page - 1) * N])
+  const messages = []
+
+  for (const row of rows) {
+    const [user] = await pool.query('SELECT name, display_name, avatar_icon FROM user WHERE id = ?', [row.user_id])
+
+    messages.push({
+      id: row.id,
+      user: user,
+      date: formatDate(row.created_at),
+      content: row.content,
+    });
+  }
+
+  message.reverse();
+
+  const { channels, description } = await getChannelListInfo(pool, channelId)
+  res.render('history', {
+    req, channels, channelId, messages, maxPage, page,
+  });
 }
 
 app.get('/profile/:userName', loginRequired, getProfile)
