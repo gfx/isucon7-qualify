@@ -303,7 +303,7 @@ function fetchUnread(req, res) {
       let p = Promise.resolve()
 
       channels.forEach(channel => {
-        const havreadMessageId = havereadMessageIdMap[channel.id];
+        const havereadMessageId = havereadMessageIdMap[channel.id];
 
         p = p.then(() => {
             if (havereadMessageId) {
