@@ -10,6 +10,7 @@ const multer = require('multer')
 const mysql = require('mysql')
 const ECT = require('ect')
 const promisify = require('es6-promisify')
+const http = require('http')
 
 const STATIC_FOLDER = path.join(__dirname, '..', 'public')
 const ICONS_FOLDER = path.join(STATIC_FOLDER, 'icons')
@@ -38,10 +39,10 @@ app.use((err, req, res, next) => {
 
 const pool = mysql.createPool({
   connectionLimit: 20,
-  host: process.env.ISUBATA_DB_HOST || 'localhost',
+  host: process.env.ISUBATA_DB_HOST || 'db',
   port: process.env.ISUBATA_DB_PORT || '3306',
-  user: process.env.ISUBATA_DB_USER || 'root',
-  password: process.env.ISUBATA_DB_PASSWORD || '',
+  user: process.env.ISUBATA_DB_USER || 'isucon',
+  password: process.env.ISUBATA_DB_PASSWORD || 'isucon',
   database: 'isubata',
   charset: 'utf8mb4',
 })
@@ -439,13 +440,33 @@ function postProfile(req, res) {
           shasum.update(data)
           const digest = shasum.digest('hex')
 
-          avatarName = digest + (ext ? `.${ext}` : '')
+          avatarName = digest + (ext ? ext : '')
           avatarData = data
         }
       }
       if (avatarName && avatarData) {
-        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, _binary ?)', [avatarName, avatarData]))
+        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, ?)', [avatarName, '']))
         p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
+        p = p.then(() => {
+          return new Promise((resolve, reject) => {
+            const req = http.request({
+              method: 'PUT',
+              host: 'db',
+              path: '/icons/' + avatarName
+            }, (res) => {
+              res.on('data', (data) => {
+              })
+              res.on('error', (err) => {
+                reject(err)
+              })
+              res.on('end', () => {
+                resolve()
+              })
+            })
+            req.write(avatarData)
+            req.end()
+          })
+        })
       }
 
       if (display_name) {
