@@ -286,7 +286,8 @@ function fetchUnread(req, res) {
     return
   }
 
-  return pool.query('select channel_id as id, count(*) as count from message group by channel_id')
+  return sleep(0.1)
+    .then(() => pool.query('select channel_id as id, count(*) as count from message group by channel_id'))
     .then(channels => {
       return Promise.all([
         Promise.resolve(channels),
