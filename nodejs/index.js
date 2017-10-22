@@ -51,7 +51,6 @@ pool.query = promisify(pool.query, pool)
 app.get('/initialize', getInitialize)
 function getInitialize(req, res) {
   return pool.query('DELETE FROM user WHERE id > 1000')
-    .then(() => pool.query('DELETE FROM image WHERE id > 1001'))
     .then(() => pool.query('DELETE FROM channel WHERE id > 10'))
     .then(() => pool.query('DELETE FROM message WHERE id > 10000'))
     // .then(() => pool.query('DELETE FROM haveread'))
@@ -460,7 +459,6 @@ function postProfile(req, res) {
         }
       }
       if (avatarName && avatarData) {
-        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, ?)', [avatarName, '']))
         p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
         p = p.then(() => {
           return new Promise((resolve, reject) => {
@@ -489,35 +487,6 @@ function postProfile(req, res) {
       }
 
       return p.then(() => res.redirect(303, '/'))
-    })
-}
-
-function ext2mime(ext) {
-  switch(ext) {
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg'
-    case '.png':
-      return 'image/png'
-    case '.gif':
-      return 'image/gif'
-    default:
-      return ''
-  }
-}
-
-app.get('/icons/:fileName', getIcon)
-function getIcon(req, res) {
-  const { fileName } = req.params
-  return pool.query('SELECT * FROM image WHERE name = ?', [fileName])
-    .then(([row]) => {
-      const ext = path.extname(fileName) || ''
-      const mime = ext2mime(ext)
-      if (!row || !mime) {
-        res.status(404).end()
-        return
-      }
-      res.header({ 'Content-Type': mime }).end(row.data)
     })
 }
 
