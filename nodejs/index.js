@@ -440,7 +440,7 @@ function postProfile(req, res) {
           shasum.update(data)
           const digest = shasum.digest('hex')
 
-          avatarName = digest + (ext ? `.${ext}` : '')
+          avatarName = digest + (ext ? ext : '')
           avatarData = data
         }
       }
