@@ -254,7 +254,7 @@ async function getMessage(req, res) {
       user: {
         name: row.user_name,
         display_name: row.user_display_name,
-        avatar_icon: "http://153.125.224.194" + row.user_avatar_icon,
+        avatar_icon: row.user_avatar_icon,
       },
     };
   });
