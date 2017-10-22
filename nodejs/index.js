@@ -310,7 +310,7 @@ function fetchUnread(req, res) {
               return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
                 [channel.id, havereadMessageId])
             } else {
-              return Promise.resolve({ count: channel.count })
+              return Promise.resolve([{ count: channel.count }])
             }
           })
           .then(([unread]) => {
@@ -323,7 +323,7 @@ function fetchUnread(req, res) {
 
       return p.then(() => results)
     })
-    .then(results => res.json(results))
+    .then(results => res.json(results)).catch((error) => console.error(error));
 }
 
 app.get('/history/:channelId', loginRequired, getHistory)
