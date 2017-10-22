@@ -1,0 +1,8 @@
+venv/
+go/
+php/
+python/
+ruby/
+perl/
+nodejs/node_modules
+*~
