@@ -308,7 +308,7 @@ function fetchUnread(req, res) {
         p = p.then(() => {
             if (havereadMessageId) {
               return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
-                [channel.id, havereaMessageId])
+                [channel.id, havereadMessageId])
             } else {
               return Promise.resolve({ count: channel.count })
             }
