@@ -286,33 +286,43 @@ function fetchUnread(req, res) {
     return
   }
 
-  return sleep(1.0)
-    .then(() => pool.query('SELECT id FROM channel'))
-    .then(rows => {
-      const channelIds = rows.map(row => row.id)
+  return pool.query('select channel_id as id, count(*) as count from message group by channel_id')
+    .then(channels => {
+      return Promise.all([
+        Promise.resolve(channels),
+        pool.query('SELECT * FROM haveread WHERE user_id = ?', [userId]),
+      ]);
+    }).then(([channels, havereads]) => {
+      const havereadMessageIdMap = {};
+      for (const haveread of havereads) {
+        havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
+      }
+
       const results = []
       let p = Promise.resolve()
 
-      channelIds.forEach(channelId => {
-        p = p.then(() => pool.query('SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?', [userId, channelId]))
-          .then(([row]) => {
-            if (row) {
-              return pool.query('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id', [channelId, row.message_id])
+      channels.forEach(channel => {
+        const havereadMessageId = havereadMessageIdMap[channel.id];
+
+        p = p.then(() => {
+            if (havereadMessageId) {
+              return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
+                [channel.id, havereadMessageId])
             } else {
-              return pool.query('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?', [channelId])
+              return Promise.resolve([{ count: channel.count }])
             }
           })
-          .then(([row3]) => {
-            const r = {}
-            r.channel_id = channelId
-            r.unread = row3.cnt
-            results.push(r)
+          .then(([unread]) => {
+            results.push({
+              channel_id: channel.id,
+              unread: unread.count,
+            })
           })
       })
 
       return p.then(() => results)
     })
-    .then(results => res.json(results))
+    .then(results => res.json(results)).catch((error) => console.error(error));
 }
 
 app.get('/history/:channelId', loginRequired, getHistory)
