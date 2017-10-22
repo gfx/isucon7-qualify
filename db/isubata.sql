@@ -46,6 +46,11 @@ CREATE TABLE haveread_count (
   PRIMARY KEY(user_id, channel_id)
 ) Engine=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE channel_info (
+  id BIGINT NOT NULL PRIMARY KEY,
+  content TEXT
+) Engine=InnoDB DEFAULT CHARSET=utf8mb4;
+
 alter table user add index (name);
 alter table message add index(channel_id);
 alter table image add index(name);

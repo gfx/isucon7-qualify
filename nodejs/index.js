@@ -62,7 +62,11 @@ async function getInitialize(req, res) {
   for (const row of rows) {
       await pool.query('update channel set message_count=? where id=?',[row.count,row.id]);
   }
-
+  const channelListInfo = await pool.query('SELECT * FROM channel ORDER BY id')
+  const content = JSON.stringify(channelListInfo)
+  await pool.query(
+    'INSERT channel_info (id, content) VALUES (1, ?) ON DUPLICATE KEY UPDATE content = ?',
+    [content, content])
   return res.status(204).send('');
 }
 
@@ -122,15 +126,15 @@ function getIndex(req, res) {
 }
 
 function getChannelListInfo (conn, focusChannelId = null) {
-  return conn.query('SELECT * FROM channel ORDER BY id')
-    .then(channels => {
+  return conn.query('SELECT content FROM channel_info WHERE id = 1')
+    .then(([row]) => {
+      let channels = JSON.parse(row.content)
       let description = ''
       channels.forEach((channel) => {
         if (channel.id == focusChannelId) {
           description = channel.description
         }
       })
-
       return { channels, description }
     })
 }
@@ -410,17 +414,22 @@ function getAddChannel(req, res) {
 }
 
 app.post('/add_channel', loginRequired, postAddChannel)
-function postAddChannel(req, res) {
+async function postAddChannel(req, res) {
   const { name, description } = req.body
   if (!name || !description) {
     res.status(400).end()
     return
   }
 
-  return pool.query('INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())', [name, description])
+  await pool.query('INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())', [name, description])
     .then(({ insertId }) => {
       res.redirect(303, '/channel/' + insertId)
     })
+  const channelListInfo = await pool.query('SELECT * FROM channel ORDER BY id')
+  const content = JSON.stringify(channelListInfo)
+  await pool.query(
+    'INSERT channel_info (id, content) VALUES (1, ?) ON DUPLICATE KEY UPDATE content = ?',
+    [content, content])
 }
 
 app.post('/profile', loginRequired, upload.single('avatar_icon'), postProfile)
