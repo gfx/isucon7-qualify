@@ -241,7 +241,7 @@ async function getMessage(req, res) {
         , user.avatar_icon as user_avatar_icon
       from message
       join user on message.user_id = user.id
-      where id > ? and channel_id = ? order by id desc limit 100
+      where message.id > ? and message.channel_id = ? order by message.id desc limit 100
     `, [last_message_id, channel_id]);
 
   const response = rows.map(row => {
