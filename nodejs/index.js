@@ -445,6 +445,8 @@ function postProfile(req, res) {
         }
       }
       if (avatarName && avatarData) {
+        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, ?)', [avatarName, '']))
+        p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
         p = p.then(() => {
           return new Promise((resolve, reject) => {
             const req = http.request({
