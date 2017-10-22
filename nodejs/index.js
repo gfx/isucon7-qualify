@@ -469,24 +469,22 @@ async function postProfile(req, res) {
   }
   if (avatarName && avatarData) {
     await pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]);
-    await new Promise((resolve, reject) => {
-      const req = http.request({
-        method: 'PUT',
-        host: 'db',
-        path: '/icons/' + avatarName
-      }, (res) => {
-        res.on('data', (data) => {
-        })
-        res.on('error', (err) => {
-          reject(err)
-        })
-        res.on('end', () => {
-          resolve()
-        })
+    const req = http.request({
+      method: 'PUT',
+      host: 'db',
+      path: '/icons/' + avatarName
+    }, (res) => {
+      res.on('data', (data) => {
       })
-      req.write(avatarData)
-      req.end()
-    });
+      res.on('error', (err) => {
+        reject(err)
+      })
+      res.on('end', () => {
+        resolve()
+      })
+    })
+    req.write(avatarData)
+    req.end()
   }
 
   if (display_name) {
