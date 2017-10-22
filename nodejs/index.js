@@ -437,6 +437,8 @@ async function postProfile(req, res) {
   const avatar_icon = req.file
   let avatarName, avatarData
 
+  const promises = [];
+
   if (avatar_icon) {
     if (avatar_icon.originalname) {
       const ext = path.extname(avatar_icon.originalname) || ''
@@ -468,8 +470,8 @@ async function postProfile(req, res) {
     }
   }
   if (avatarName && avatarData) {
-    await pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]);
-    await new Promise((resolve, reject) => {
+    promises.push(pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]));
+    promises.push(new Promise((resolve, reject) => {
       const req = http.request({
         method: 'PUT',
         host: 'db',
@@ -486,12 +488,14 @@ async function postProfile(req, res) {
       })
       req.write(avatarData)
       req.end()
-    });
+    }));
   }
 
   if (display_name) {
-    await pool.query('UPDATE user SET display_name = ? WHERE id = ?', [display_name, userId])
+    promises.push(pool.query('UPDATE user SET display_name = ? WHERE id = ?', [display_name, userId]));
   }
+
+  await Promise.all(promises);
 
   res.redirect(303, '/')
 }
