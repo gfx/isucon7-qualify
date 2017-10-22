@@ -49,14 +49,20 @@ const pool = mysql.createPool({
 pool.query = promisify(pool.query, pool)
 
 app.get('/initialize', getInitialize)
-function getInitialize(req, res) {
-  return pool.query('DELETE FROM user WHERE id > 1000')
-    .then(() => pool.query('DELETE FROM image WHERE id > 1001'))
-    .then(() => pool.query('DELETE FROM channel WHERE id > 10'))
-    .then(() => pool.query('DELETE FROM message WHERE id > 10000'))
-    .then(() => pool.query('DELETE FROM haveread'))
-    .then(() => pool.query('DELETE FROM haveread_count'))
-    .then(() => res.status(204).send(''))
+async function getInitialize(req, res) {
+  await pool.query('DELETE FROM user WHERE id > 1000');
+  await pool.query('DELETE FROM image WHERE id > 1001');
+  await pool.query('DELETE FROM channel WHERE id > 10');
+  await pool.query('DELETE FROM message WHERE id > 10000');
+  await pool.query('DELETE FROM haveread');
+  await pool.query('DELETE FROM haveread_count');
+
+  const rows = await pool.query('select channel_id as id, count(*) as count from message group by channel_id');
+  channels.forEach(async(row) => {
+      await pool.query('update channel set message_count=? where id=?',[row.count,row.id]);
+  });
+
+  return res.status(204).send('');
 }
 
 function dbGetUser(conn, userId) {
@@ -64,8 +70,10 @@ function dbGetUser(conn, userId) {
     .then(([result]) => result)
 }
 
-function dbAddMessage(conn, channelId, userId, content) {
-  return conn.query('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())', [channelId, userId, content])
+async function dbAddMessage(conn, channelId, userId, content) {
+   const ret = await conn.query('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())', [channelId, userId, content]);
+   await conn.query('update channel set message_count = message_count + 1 where id=?',[channelId]);
+   return ret;
 }
 
 function loginRequired(req, res, next) {
