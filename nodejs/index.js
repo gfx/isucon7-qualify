@@ -54,7 +54,7 @@ async function getInitialize(req, res) {
   await pool.query('DELETE FROM image WHERE id > 1001');
   await pool.query('DELETE FROM channel WHERE id > 10');
   await pool.query('DELETE FROM message WHERE id > 10000');
-  await pool.query('DELETE FROM haveread');
+  // await pool.query('DELETE FROM haveread');
   await pool.query('DELETE FROM haveread_count');
 
   const rows = await pool.query('select channel_id as id, count(*) as count from message group by channel_id');
@@ -268,11 +268,6 @@ async function getMessage(req, res) {
 
   const maxMessageId = rows.length ? Math.max(...rows.map(r => r.id)) : 0;
 
-  await pool.query(`INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)
-  VALUES (?, ?, ?, NOW(), NOW())
-  ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()`,
-  [userId, channel_id, maxMessageId, maxMessageId]);
-
   const [num] = await pool.query('SELECT COUNT(*) as count from message WHERE channel_id = ?', [channel_id])
   await pool.query(`INSERT INTO haveread_count (user_id, channel_id, num)
   VALUES (?, ?, ?)
@@ -303,14 +298,9 @@ function fetchUnread(req, res) {
     .then(channels => {
       return Promise.all([
         Promise.resolve(channels),
-        pool.query('SELECT * FROM haveread WHERE user_id = ?', [userId]),
         pool.query('SELECT * FROM haveread_count WHERE user_id = ?', [userId]),
       ]);
-    }).then(([channels, havereads, havereadCounts]) => {
-      const havereadMessageIdMap = {};
-      for (const haveread of havereads) {
-        havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
-      }
+    }).then(([channels, havereadCounts]) => {
       const havereadCountsMap = {};
       for (const haveread of havereadCounts) {
         havereadCountsMap[haveread.channel_id] = haveread.num;
@@ -321,17 +311,10 @@ function fetchUnread(req, res) {
 
       channels.forEach(channel => {
         const havereadCount = havereadCountsMap[channel.id]
-        const havereadMessageId = havereadMessageIdMap[channel.id];
 
         p = p.then(() => {
-            // if (havereadCount) {
-            //   return Promise.resolve([{ count: channel.count - havereadCount }])
-            // } else {
-            //   return Promise.resolve([{ count: channel.count }])
-            // }
-            if (havereadMessageId) {
-              return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
-                [channel.id, havereadMessageId])
+            if (havereadCount) {
+              return Promise.resolve([{ count: channel.count - havereadCount }])
             } else {
               return Promise.resolve([{ count: channel.count }])
             }
@@ -485,7 +468,6 @@ function postProfile(req, res) {
         }
       }
       if (avatarName && avatarData) {
-        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, ?)', [avatarName, '']))
         p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
         p = p.then(() => {
           return new Promise((resolve, reject) => {
@@ -514,35 +496,6 @@ function postProfile(req, res) {
       }
 
       return p.then(() => res.redirect(303, '/'))
-    })
-}
-
-function ext2mime(ext) {
-  switch(ext) {
-    case '.jpg':
-    case '.jpeg':
-      return 'image/jpeg'
-    case '.png':
-      return 'image/png'
-    case '.gif':
-      return 'image/gif'
-    default:
-      return ''
-  }
-}
-
-app.get('/icons/:fileName', getIcon)
-function getIcon(req, res) {
-  const { fileName } = req.params
-  return pool.query('SELECT * FROM image WHERE name = ?', [fileName])
-    .then(([row]) => {
-      const ext = path.extname(fileName) || ''
-      const mime = ext2mime(ext)
-      if (!row || !mime) {
-        res.status(404).end()
-        return
-      }
-      res.header({ 'Content-Type': mime }).end(row.data)
     })
 }
 
