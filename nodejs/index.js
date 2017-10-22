@@ -336,7 +336,7 @@ async function getHistory(req, res) {
   const page = parseInt(req.query.page || '1')
 
   const N = 20
-  const [{ count }] = await pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ?', [channelId])
+  const [{ count }] = await pool.query('SELECT message_count as count FROM channel WHERE id = ?', [channelId])
 
   const maxPage = Math.max(Math.ceil(count / N), 1)
 
