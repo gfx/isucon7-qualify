@@ -54,7 +54,7 @@ function getInitialize(req, res) {
     .then(() => pool.query('DELETE FROM image WHERE id > 1001'))
     .then(() => pool.query('DELETE FROM channel WHERE id > 10'))
     .then(() => pool.query('DELETE FROM message WHERE id > 10000'))
-    .then(() => pool.query('DELETE FROM haveread'))
+    // .then(() => pool.query('DELETE FROM haveread'))
     .then(() => pool.query('DELETE FROM haveread_count'))
     .then(() => res.status(204).send(''))
 }
@@ -260,10 +260,10 @@ async function getMessage(req, res) {
 
   const maxMessageId = rows.length ? Math.max(...rows.map(r => r.id)) : 0;
 
-  await pool.query(`INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)
-  VALUES (?, ?, ?, NOW(), NOW())
-  ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()`,
-  [userId, channel_id, maxMessageId, maxMessageId]);
+  // await pool.query(`INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)
+  // VALUES (?, ?, ?, NOW(), NOW())
+  // ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()`,
+  // [userId, channel_id, maxMessageId, maxMessageId]);
 
   const [num] = await pool.query('SELECT COUNT(*) as count from message WHERE channel_id = ?', [channel_id])
   await pool.query(`INSERT INTO haveread_count (user_id, channel_id, num)
@@ -295,14 +295,15 @@ function fetchUnread(req, res) {
     .then(channels => {
       return Promise.all([
         Promise.resolve(channels),
-        pool.query('SELECT * FROM haveread WHERE user_id = ?', [userId]),
+        // pool.query('SELECT * FROM haveread WHERE user_id = ?', [userId]),
         pool.query('SELECT * FROM haveread_count WHERE user_id = ?', [userId]),
       ]);
-    }).then(([channels, havereads, havereadCounts]) => {
-      const havereadMessageIdMap = {};
-      for (const haveread of havereads) {
-        havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
-      }
+    // }).then(([channels, havereads, havereadCounts]) => {
+    }).then(([channels, havereadCounts]) => {
+      // const havereadMessageIdMap = {};
+      // for (const haveread of havereads) {
+      //   havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
+      // }
       const havereadCountsMap = {};
       for (const haveread of havereadCounts) {
         havereadCountsMap[haveread.channel_id] = haveread.num;
@@ -313,20 +314,20 @@ function fetchUnread(req, res) {
 
       channels.forEach(channel => {
         const havereadCount = havereadCountsMap[channel.id]
-        const havereadMessageId = havereadMessageIdMap[channel.id];
+        // const havereadMessageId = havereadMessageIdMap[channel.id];
 
         p = p.then(() => {
-            // if (havereadCount) {
-            //   return Promise.resolve([{ count: channel.count - havereadCount }])
-            // } else {
-            //   return Promise.resolve([{ count: channel.count }])
-            // }
-            if (havereadMessageId) {
-              return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
-                [channel.id, havereadMessageId])
+            if (havereadCount) {
+              return Promise.resolve([{ count: channel.count - havereadCount }])
             } else {
               return Promise.resolve([{ count: channel.count }])
             }
+            // if (havereadMessageId) {
+            //   return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
+            //     [channel.id, havereadMessageId])
+            // } else {
+            //   return Promise.resolve([{ count: channel.count }])
+            // }
           })
           .then(([unread]) => {
             results.push({
