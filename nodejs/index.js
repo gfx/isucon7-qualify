@@ -244,7 +244,7 @@ async function getMessage(req, res) {
         , user.name as user_name
         , user.display_name as user_display_name
         , user.avatar_icon as user_avatar_icon
-      from message
+      from message force index(channel_id)
       join user on message.user_id = user.id
       where message.id > ? and message.channel_id = ? order by message.id desc limit 100
     `, [last_message_id, channel_id]);
@@ -352,7 +352,7 @@ async function getHistory(req, res) {
         , user.name as user_name
         , user.display_name as user_display_name
         , user.avatar_icon as user_avatar_icon
-      from message
+      from message force index(channel_id)
       join user on message.user_id = user.id
       where message.channel_id = ? order by message.id desc
       limit ? offset ?
