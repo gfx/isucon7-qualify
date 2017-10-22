@@ -10,6 +10,7 @@ const multer = require('multer')
 const mysql = require('mysql')
 const ECT = require('ect')
 const promisify = require('es6-promisify')
+const http = require('http')
 
 const STATIC_FOLDER = path.join(__dirname, '..', 'public')
 const ICONS_FOLDER = path.join(STATIC_FOLDER, 'icons')
@@ -444,8 +445,26 @@ function postProfile(req, res) {
         }
       }
       if (avatarName && avatarData) {
-        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, _binary ?)', [avatarName, avatarData]))
+        p = p.then(() => pool.query('INSERT INTO image (name, data) VALUES (?, ?)', [avatarName, '']))
         p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
+        p = p.then(() => {
+          return new Promise((resolve, reject) => {
+            const req = http.request({
+              method: 'PUT',
+              host: 'db',
+              path: '/icons/' + avatarName
+            }, (res) => {
+              res.on('error', (err) => {
+                reject(err)
+              })
+              res.on('end', () => {
+                resolve()
+              })
+            })
+            req.write(avatarData)
+            req.end()
+          })
+        })
       }
 
       if (display_name) {
