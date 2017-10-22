@@ -58,9 +58,9 @@ async function getInitialize(req, res) {
   await pool.query('DELETE FROM haveread_count');
 
   const rows = await pool.query('select channel_id as id, count(*) as count from message group by channel_id');
-  channels.forEach(async(row) => {
+  for (const row of rows) {
       await pool.query('update channel set message_count=? where id=?',[row.count,row.id]);
-  });
+  }
 
   return res.status(204).send('');
 }
