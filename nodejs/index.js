@@ -264,6 +264,12 @@ async function getMessage(req, res) {
   ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()`,
   [userId, channel_id, maxMessageId, maxMessageId]);
 
+  const [num] = await pool.query('SELECT COUNT(*) as count from message WHERE channel_id = ?', [channel_id])
+  await pool.query(`INSERT INTO haveread_count (user_id, channel_id, num)
+  VALUES (?, ?, ?)
+  ON DUPLICATE KEY UPDATE num = ?`,
+  [userId, channel_id, num.count, num.count]);
+
   res.json(response); // TODO: insert into haveread の前でもいいかも
 }
 
@@ -289,17 +295,29 @@ function fetchUnread(req, res) {
       return Promise.all([
         Promise.resolve(channels),
         pool.query('SELECT * FROM haveread WHERE user_id = ?', [userId]),
+        pool.query('SELECT * FROM haveread_count WHERE user_id = ?', [userId]),
       ]);
-    }).then(([channels, havereads]) => {
+    }).then(([channels, havereads, havereadCounts]) => {
       const havereadMessageIdMap = {};
       for (const haveread of havereads) {
         havereadMessageIdMap[haveread.channel_id] = haveread.message_id;
       }
+      const havereadCountsMap = {};
+      for (const haveread of havereadCounts) {
+        havereadCountsMap[haveread.channel_id] = haveread.num;
+      }
+      console.log(havereadCountsMap)
 
       const results = []
       let p = Promise.resolve()
 
       channels.forEach(channel => {
+        // const havereadCount = havereadCountsMap[channel.id]
+        // if (havereadCount) {
+        //   return Promise.resolve([{ count: channel.count - havereadCount }])
+        // } else {
+        //   return Promise.resolve([{ count: channel.count }])
+        // }
         const havereadMessageId = havereadMessageIdMap[channel.id];
 
         p = p.then(() => {
