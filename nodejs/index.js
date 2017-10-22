@@ -259,16 +259,14 @@ async function getMessage(req, res) {
   });
   response.reverse();
 
-  res.json(response);
-
   const maxMessageId = rows.length ? Math.max(...rows.map(r => r.id)) : 0;
 
-  pool.query(`INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)
+  await pool.query(`INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)
   VALUES (?, ?, ?, NOW(), NOW())
   ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()`,
-  [userId, channel_id, maxMessageId, maxMessageId]).then(() => {
-    // OK!
-  });
+  [userId, channel_id, maxMessageId, maxMessageId]);
+
+  res.json(response); // TODO: insert into haveread の前でもいいかも
 }
 
 function sleep (seconds) {
