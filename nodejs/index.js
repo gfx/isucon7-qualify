@@ -55,6 +55,7 @@ function getInitialize(req, res) {
     .then(() => pool.query('DELETE FROM channel WHERE id > 10'))
     .then(() => pool.query('DELETE FROM message WHERE id > 10000'))
     .then(() => pool.query('DELETE FROM haveread'))
+    .then(() => pool.query('DELETE FROM haveread_count'))
     .then(() => res.status(204).send(''))
 }
 
@@ -312,15 +313,15 @@ function fetchUnread(req, res) {
       let p = Promise.resolve()
 
       channels.forEach(channel => {
-        // const havereadCount = havereadCountsMap[channel.id]
-        // if (havereadCount) {
-        //   return Promise.resolve([{ count: channel.count - havereadCount }])
-        // } else {
-        //   return Promise.resolve([{ count: channel.count }])
-        // }
+        const havereadCount = havereadCountsMap[channel.id]
         const havereadMessageId = havereadMessageIdMap[channel.id];
 
         p = p.then(() => {
+            // if (havereadCount) {
+            //   return Promise.resolve([{ count: channel.count - havereadCount }])
+            // } else {
+            //   return Promise.resolve([{ count: channel.count }])
+            // }
             if (havereadMessageId) {
               return pool.query('SELECT COUNT(*) as count FROM message WHERE channel_id = ? AND ? < id',
                 [channel.id, havereadMessageId])
