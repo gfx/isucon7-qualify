@@ -426,77 +426,74 @@ function postAddChannel(req, res) {
 }
 
 app.post('/profile', loginRequired, upload.single('avatar_icon'), postProfile)
-function postProfile(req, res) {
+async function postProfile(req, res) {
   const { userId } = req.session
   if (!userId) {
     res.status(403).end()
     return
   }
 
-  return dbGetUser(pool, userId)
-    .then(user => {
-      if (!user) {
-        res.status(403).end()
+  const { display_name } = req.body
+  const avatar_icon = req.file
+  let avatarName, avatarData
+
+  if (avatar_icon) {
+    if (avatar_icon.originalname) {
+      const ext = path.extname(avatar_icon.originalname) || ''
+      if (!['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
+        res.status(400).end()
         return
       }
 
-      const { display_name } = req.body
-      const avatar_icon = req.file
-      let avatarName, avatarData
-
-      let p = Promise.resolve()
-      if (avatar_icon) {
-        if (avatar_icon.originalname) {
-          const ext = path.extname(avatar_icon.originalname) || ''
-          if (!['.jpg', '.jpeg', '.png', '.gif'].includes(ext)) {
-            res.status(400).end()
-            return
-          }
-
-          if (avatar_icon.size > AVATAR_MAX_SIZE) {
-            res.status(400).end()
-            return
-          }
-
-          const data = fs.readFileSync(avatar_icon.path)
-          const shasum = crypto.createHash('sha1')
-          shasum.update(data)
-          const digest = shasum.digest('hex')
-
-          avatarName = digest + (ext ? ext : '')
-          avatarData = data
-        }
+      if (avatar_icon.size > AVATAR_MAX_SIZE) {
+        res.status(400).end()
+        return
       }
-      if (avatarName && avatarData) {
-        p = p.then(() => pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]))
-        p = p.then(() => {
-          return new Promise((resolve, reject) => {
-            const req = http.request({
-              method: 'PUT',
-              host: 'db',
-              path: '/icons/' + avatarName
-            }, (res) => {
-              res.on('data', (data) => {
-              })
-              res.on('error', (err) => {
-                reject(err)
-              })
-              res.on('end', () => {
-                resolve()
-              })
-            })
-            req.write(avatarData)
-            req.end()
-          })
+
+      const data = await new Promise((resolve, reject) => {
+        fs.readFile(avatar_icon.path, (err, buffer) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(buffer);
+          }
+        });
+      });
+      const shasum = crypto.createHash('sha1')
+      shasum.update(data)
+      const digest = shasum.digest('hex')
+
+      avatarName = digest + (ext ? ext : '')
+      avatarData = data
+    }
+  }
+  if (avatarName && avatarData) {
+    await pool.query('UPDATE user SET avatar_icon = ? WHERE id = ?', [avatarName, userId]);
+    await new Promise((resolve, reject) => {
+      const req = http.request({
+        method: 'PUT',
+        host: 'db',
+        path: '/icons/' + avatarName
+      }, (res) => {
+        res.on('data', (data) => {
         })
-      }
+        res.on('error', (err) => {
+          reject(err)
+        })
+        res.on('end', () => {
+          resolve()
+        })
+      })
+      req.write(avatarData)
+      req.end()
+    });
+  }
 
-      if (display_name) {
-        p = p.then(() => pool.query('UPDATE user SET display_name = ? WHERE id = ?', [display_name, userId]))
-      }
+  if (display_name) {
+    await pool.query('UPDATE user SET display_name = ? WHERE id = ?', [display_name, userId])
+  }
 
-      return p.then(() => res.redirect(303, '/'))
-    })
+  res.redirect(303, '/')
 }
 
 app.listen(PORT, () => {
