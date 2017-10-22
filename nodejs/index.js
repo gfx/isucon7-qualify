@@ -307,7 +307,6 @@ function fetchUnread(req, res) {
       for (const haveread of havereadCounts) {
         havereadCountsMap[haveread.channel_id] = haveread.num;
       }
-      console.log(havereadCountsMap)
 
       const results = []
       let p = Promise.resolve()
