@@ -349,7 +349,7 @@ async function getHistory(req, res) {
       join user on message.user_id = user.id
       where message.channel_id = ? order by message.id desc
       limit ? offset ?
-    `, [channel_id, N, (page - 1) * N]);
+    `, [channelId, N, (page - 1) * N]);
 
 
   const messages = []
