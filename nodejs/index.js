@@ -338,17 +338,33 @@ async function getHistory(req, res) {
     return
   }
 
-  const rows = await pool.query('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?', [channelId, N, (page - 1) * N])
+  const rows = await pool.query(
+    `
+      select
+        message.*
+        , user.name as user_name
+        , user.display_name as user_display_name
+        , user.avatar_icon as user_avatar_icon
+      from message
+      join user on message.user_id = user.id
+      where message.channel_id = ? order by message.id desc
+      limit ? offset ?
+    `, [channelId, N, (page - 1) * N]);
+
+
   const messages = []
 
   for (const row of rows) {
-    const [user] = await pool.query('SELECT name, display_name, avatar_icon FROM user WHERE id = ?', [row.user_id])
-
     messages.push({
       id: row.id,
-      user: user,
       date: formatDate(row.created_at),
       content: row.content,
+
+      user: {
+        name: row.user_name,
+        display_name: row.user_display_name,
+        avatar_icon: row.user_avatar_icon,
+      },
     });
   }
 
